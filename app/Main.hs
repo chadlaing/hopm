@@ -4,20 +4,27 @@ module Main where
 
 import Prelude ()
 import System.IO (print, IO)
-import Control.Monad (mapM)
-import System.Directory (getDirectoryContents)
+import Control.Monad (mapM, liftM, filterM)
+import System.Directory (getDirectoryContents, doesFileExist)
 import Data.Functor (fmap)
-import ParseKineticFile
-import qualified Data.ByteString.Lazy.Char8 as BS
+import Data.List (filter, or, (++))
+import ParseKineticFile (getHeader)
+import Data.Function ((.), ($))
+import Data.Text.Lazy.IO (readFile)
+import qualified Data.Text.Lazy as T
 
 
 main :: IO ()
 main = do
-    let theDirectory = "/home/chad/workspace/ecoli_omnilog/data/kinetic/AllEdited"
+    let theDirectory = "/home/chad/workspace/ecoli_omnilog/data/kinetic/AllEdited/"
     allFiles <- getDirectoryContents theDirectory
-    allData <- mapM BS.readFile allFiles
-    let (a:b) = allData
-    print a
+    filteredFiles <- filterM doesFileExist $
+                        fmap (theDirectory ++) allFiles
+    fileContents <- mapM readFile filteredFiles
+    let (a:b) = fileContents
+    let (h, text) = getHeader a
+    print h
+
 
 
 
