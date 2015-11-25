@@ -8,7 +8,7 @@ import Control.Monad (mapM, liftM, filterM)
 import System.Directory (getDirectoryContents, doesFileExist)
 import Data.Functor (fmap)
 import Data.List (filter, or, (++))
-import ParseKineticFile (getHeader)
+import ParseKineticFile (splitHeaderData, summarizeData)
 import Data.Function ((.), ($))
 import Data.Text.Lazy.IO (readFile)
 import qualified Data.Text.Lazy as T
@@ -21,9 +21,8 @@ main = do
     filteredFiles <- filterM doesFileExist $
                         fmap (theDirectory ++) allFiles
     fileContents <- mapM readFile filteredFiles
-    let (a:b) = fileContents
-    let (h, text) = getHeader a
-    print h
+    let summarizedData = summarizeData
+    print summarizedData
 
 
 
