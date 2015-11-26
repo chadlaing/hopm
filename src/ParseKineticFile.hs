@@ -1,214 +1,59 @@
+{-|
+Module      : ParseKineticFile
+Description : Analyses of omnilog kinetic data files.
+Copyright   : (c) Chad Laing, 2015
+License     : BSD3
+Maintainer  : chadlainge@inoutbox.com
+Stability   : beta
+Portability : POSIX
+
+Parses omnilog kinetic data files into appropriate data structures for statistical analyses.
+-}
+
+
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric              #-}
 
 module ParseKineticFile
 (splitHeaderData
+,createExperiment
 ) where
 
 import           Data.Eq
 import           Data.Ord
 import qualified Data.Text.Lazy as T
-import           Prelude        (Enum, Float, undefined)
+import           Prelude        (Enum, Float, undefined, error, Bounded, minBound)
 import           Text.Read
 import           Text.Show
+import Data.Hashable
+import GHC.Generics               (Generic)
+import Data.List (zip)
+import Data.Foldable (foldl')
+import Data.Function ((.), ($))
 import qualified Data.HashMap.Strict as HM
 
 
 -- | Define all possible 96 wells for the omnilog plates
 -- createExperiment is used to define the proper annotations.
-data Well = A01{annotation :: T.Text
-               ,value :: Float}
-          | A02{annotation :: T.Text
-               ,value :: Float}
-          | A03{annotation :: T.Text
-               ,value :: Float}
-          | A04{annotation :: T.Text
-               ,value :: Float}
-          | A05{annotation :: T.Text
-               ,value :: Float}
-          | A06{annotation :: T.Text
-               ,value :: Float}
-          | A07{annotation :: T.Text
-               ,value :: Float}
-          | A08{annotation :: T.Text
-               ,value :: Float}
-          | A09{annotation :: T.Text
-               ,value :: Float}
-          | A10{annotation :: T.Text
-               ,value :: Float}
-          | A11{annotation :: T.Text
-               ,value :: Float}
-          | A12{annotation :: T.Text
-               ,value :: Float}
-          | B01{annotation :: T.Text
-               ,value :: Float}
-          | B02{annotation :: T.Text
-               ,value :: Float}
-          | B03{annotation :: T.Text
-               ,value :: Float}
-          | B04{annotation :: T.Text
-               ,value :: Float}
-          | B05{annotation :: T.Text
-               ,value :: Float}
-          | B06{annotation :: T.Text
-               ,value :: Float}
-          | B07{annotation :: T.Text
-               ,value :: Float}
-          | B08{annotation :: T.Text
-               ,value :: Float}
-          | B09{annotation :: T.Text
-               ,value :: Float}
-          | B10{annotation :: T.Text
-               ,value :: Float}
-          | B11{annotation :: T.Text
-               ,value :: Float}
-          | B12{annotation :: T.Text
-               ,value :: Float}
-          | C01{annotation :: T.Text
-               ,value :: Float}
-          | C02{annotation :: T.Text
-               ,value :: Float}
-          | C03{annotation :: T.Text
-               ,value :: Float}
-          | C04{annotation :: T.Text
-               ,value :: Float}
-          | C05{annotation :: T.Text
-               ,value :: Float}
-          | C06{annotation :: T.Text
-               ,value :: Float}
-          | C07{annotation :: T.Text
-               ,value :: Float}
-          | C08{annotation :: T.Text
-               ,value :: Float}
-          | C09{annotation :: T.Text
-               ,value :: Float}
-          | C10{annotation :: T.Text
-               ,value :: Float}
-          | C11{annotation :: T.Text
-               ,value :: Float}
-          | C12{annotation :: T.Text
-               ,value :: Float}
-          | D01{annotation :: T.Text
-               ,value :: Float}
-          | D02{annotation :: T.Text
-               ,value :: Float}
-          | D03{annotation :: T.Text
-               ,value :: Float}
-          | D04{annotation :: T.Text
-               ,value :: Float}
-          | D05{annotation :: T.Text
-               ,value :: Float}
-          | D06{annotation :: T.Text
-               ,value :: Float}
-          | D07{annotation :: T.Text
-               ,value :: Float}
-          | D08{annotation :: T.Text
-               ,value :: Float}
-          | D09{annotation :: T.Text
-               ,value :: Float}
-          | D10{annotation :: T.Text
-               ,value :: Float}
-          | D11{annotation :: T.Text
-               ,value :: Float}
-          | D12{annotation :: T.Text
-               ,value :: Float}
-          | E01{annotation :: T.Text
-               ,value :: Float}
-          | E02{annotation :: T.Text
-               ,value :: Float}
-          | E03{annotation :: T.Text
-               ,value :: Float}
-          | E04{annotation :: T.Text
-               ,value :: Float}
-          | E05{annotation :: T.Text
-               ,value :: Float}
-          | E06{annotation :: T.Text
-               ,value :: Float}
-          | E07{annotation :: T.Text
-               ,value :: Float}
-          | E08{annotation :: T.Text
-               ,value :: Float}
-          | E09{annotation :: T.Text
-               ,value :: Float}
-          | E10{annotation :: T.Text
-               ,value :: Float}
-          | E11{annotation :: T.Text
-               ,value :: Float}
-          | E12{annotation :: T.Text
-               ,value :: Float}
-          | F01{annotation :: T.Text
-               ,value :: Float}
-          | F02{annotation :: T.Text
-               ,value :: Float}
-          | F03{annotation :: T.Text
-               ,value :: Float}
-          | F04{annotation :: T.Text
-               ,value :: Float}
-          | F05{annotation :: T.Text
-               ,value :: Float}
-          | F06{annotation :: T.Text
-               ,value :: Float}
-          | F07{annotation :: T.Text
-               ,value :: Float}
-          | F08{annotation :: T.Text
-               ,value :: Float}
-          | F09{annotation :: T.Text
-               ,value :: Float}
-          | F10{annotation :: T.Text
-               ,value :: Float}
-          | F11{annotation :: T.Text
-               ,value :: Float}
-          | F12{annotation :: T.Text
-               ,value :: Float}
-          | G01{annotation :: T.Text
-               ,value :: Float}
-          | G02{annotation :: T.Text
-               ,value :: Float}
-          | G03{annotation :: T.Text
-               ,value :: Float}
-          | G04{annotation :: T.Text
-               ,value :: Float}
-          | G05{annotation :: T.Text
-               ,value :: Float}
-          | G06{annotation :: T.Text
-               ,value :: Float}
-          | G07{annotation :: T.Text
-               ,value :: Float}
-          | G08{annotation :: T.Text
-               ,value :: Float}
-          | G09{annotation :: T.Text
-               ,value :: Float}
-          | G10{annotation :: T.Text
-               ,value :: Float}
-          | G11{annotation :: T.Text
-               ,value :: Float}
-          | G12{annotation :: T.Text
-               ,value :: Float}
-          | H01{annotation :: T.Text
-               ,value :: Float}
-          | H02{annotation :: T.Text
-               ,value :: Float}
-          | H03{annotation :: T.Text
-               ,value :: Float}
-          | H04{annotation :: T.Text
-               ,value :: Float}
-          | H05{annotation :: T.Text
-               ,value :: Float}
-          | H06{annotation :: T.Text
-               ,value :: Float}
-          | H07{annotation :: T.Text
-               ,value :: Float}
-          | H08{annotation :: T.Text
-               ,value :: Float}
-          | H09{annotation :: T.Text
-               ,value :: Float}
-          | H10{annotation :: T.Text
-               ,value :: Float}
-          | H11{annotation :: T.Text
-               ,value :: Float}
-          | H12{annotation :: T.Text
-               ,value :: Float}
-          deriving(Ord, Eq, Show, Read)
+-- In order for type Well to be used as a hash key, it needs to be
+-- an instance of Hashable (requires Data.Hashable), and to derive the
+-- type Generic (requires GHC.Generics, and enabling the DeriveGeneric
+-- pragma).
+data Well = A01 | A02 | A03 | A04 | A05 | A06 | A07 | A08 | A09 | A10 | A11 | A12
+          | B01 | B02 | B03 | B04 | B05 | B06 | B07 | B08 | B09 | B10 | B11 | B12
+          | C01 | C02 | C03 | C04 | C05 | C06 | C07 | C08 | C09 | C10 | C11 | C12
+          | D01 | D02 | D03 | D04 | D05 | D06 | D07 | D08 | D09 | D10 | D11 | D12
+          | E01 | E02 | E03 | E04 | E05 | E06 | E07 | E08 | E09 | E10 | E11 | E12
+          | F01 | F02 | F03 | F04 | F05 | F06 | F07 | F08 | F09 | F10 | F11 | F12
+          | G01 | G02 | G03 | G04 | G05 | G06 | G07 | G08 | G09 | G10 | G11 | G12
+          | H01 | H02 | H03 | H04 | H05 | H06 | H07 | H08 | H09 | H10 | H11 | H12
+          deriving(Ord, Eq, Show, Read, Enum, Bounded, Generic)
 
+instance Hashable Well
+
+data WellInfo = WellInfo{annotation :: T.Text
+                        ,value :: Float
+} deriving (Eq, Show, Read)
 
 -- | All 20 possible plates defined for the omnilog system.
 -- Create experiment is used to assign the correct description.
@@ -239,15 +84,14 @@ data Plate = PM1{description :: T.Text}
 -- | All possible metadata for an Experiment.
 -- The required `name` and any other metadata, that will be stored
 -- as a HashMap of T.Text keys and values
-data Metadata = Metadata{name :: T.Text
-                        ,metaFields :: HM.HashMap T.Text T.Text
-} deriving(Eq, Show, Read)
+newtype Metadata = Metadata {unMetadata :: HM.HashMap T.Text T.Text} deriving(Eq, Show, Read)
 
 
 -- | The Experiment type contains Plate, Well and Metadata information.
 -- Created only indirectly through createExperiment
 data Experiment = Experiment{plate :: Plate
-                            ,wells :: HM.HashMap T.Text Well
+                            ,wells :: HM.HashMap Well WellInfo
+                            ,meta :: Metadata
 } deriving(Eq, Show, Read)
 
 
@@ -264,9 +108,83 @@ splitHeaderData = T.breakOn "Hour"
 -- well values.
 createExperiment :: (T.Text, T.Text) -> Experiment
 createExperiment (header, eData) =
-    Experiment thePlate theWells
+    Experiment thePlate theWells theMetadata
       where
-        thePlate = undefined
-        theWells = undefined
+        theMetadata = getMetadata header
+        thePlate = getPlate $ HM.lookupDefault (error "Unknown Plate Type") "Plate Type" $ unMetadata theMetadata
+        theWells = getWells thePlate
 
 
+-- | Parse the header for plate metadata
+getMetadata :: T.Text -> Metadata
+getMetadata h = Metadata m
+  where
+    m = foldl' parseHeaderLine HM.empty (T.lines h)
+
+
+-- | Split each header line, add the key value pair to
+-- the HashMap, and return the whole thing for Metadata.
+-- Remove the delimiter and all trailing space from both
+-- the keys and the values.
+parseHeaderLine :: HM.HashMap T.Text T.Text
+                -> T.Text
+                -> HM.HashMap T.Text T.Text
+parseHeaderLine hm t = HM.insert k v hm
+  where
+    (kk, vv) = T.breakOn "," t
+    k = T.strip kk
+    v = T.strip $ T.drop 1 vv
+
+
+
+-- | Returns an actual plate Type based on the
+-- metadata text.
+getPlate :: T.Text -> Plate
+getPlate x = case x of
+    "PM1" -> PM1 "Carbon utilization assays"
+    "PM2" -> PM2 "Carbon utilization assays"
+    "PM3" -> PM3 "Nitrogen utilization assays"
+    "PM4" -> PM4 "Phosphorus - Sulfur utilization assays"
+    "PM5" -> PM5 "Biosynthetic pathway/nutrient stimulation"
+    "PM6" -> PM6 "Nitrogen utilization assays"
+    "PM7" -> PM7 "Nitrogen utilization assays"
+    "PM8" -> PM8 "Nitrogen utilization assays"
+    "PM9" -> PM9 "Osmotic/Ionic response assays"
+    "PM10" -> PM10 "pH response assays"
+    "PM11" -> PM11 "Bacterial chemical sensitivity assays"
+    "PM12" -> PM12 "Bacterial chemical sensitivity assays"
+    "PM13" -> PM13 "Bacterial chemical sensitivity assays"
+    "PM14" -> PM14 "Bacterial chemical sensitivity assays"
+    "PM15" -> PM15 "Bacterial chemical sensitivity assays"
+    "PM16" -> PM16 "Bacterial chemical sensitivity assays"
+    "PM17" -> PM17 "Bacterial chemical sensitivity assays"
+    "PM18" -> PM18 "Bacterial chemical sensitivity assays"
+    "PM19" -> PM19 "Bacterial chemical sensitivity assays"
+    "PM20" -> PM20 "Bacterial chemical sensitivity assays"
+    _ -> error "Unknown PM plate"
+
+
+ -- | Return the well annotations as a HashMap according to the
+ -- Plate type. We zip the wells with the annotations to ensure
+ -- proper matching of the terms in createWellInfo
+getWells :: Plate -> HM.HashMap Well WellInfo
+getWells p = case p of
+    PM1 _ -> foldl' createWellInfo HM.empty $ zip allWells pm1Annotations
+
+
+createWellInfo :: HM.HashMap Well WellInfo
+               -> (Well, T.Text)
+               -> HM.HashMap Well WellInfo
+createWellInfo hm (w, anno) = HM.insert w WellInfo {annotation = anno, value = 0.05} hm
+
+
+-- | Generate a list of all possible wells for Well
+-- This information will be combined with the appropriate label
+-- given the plate type in createExperiment
+allWells :: [Well]
+allWells = [(minBound :: Well) ..]
+
+
+-- | Bulk list of PM1 well annotations
+pm1Annotations :: [T.Text]
+pm1Annotations = ["Negative Control","L-Arabinose","N-Acetyl-D-Glucosamine","D-Saccharic Acid","Succinic Acid","D-Galactose","L-Aspartic Acid","L-Proline","D-Alanine","D-Trehalose","D-Mannose","Dulcitol","D-Serine","D-Sorbitol","Glycerol","L-Fucose","D-Glucuronic Acid","D-Gluconic Acid","D,L-a-Glycerol-Phosphate","D-Xylose","L-Lactic Acid","Sodium Formate","D-Mannitol","L-Glutamic Acid","D-Glucose-6-Phosphate","D-Galactonic Acid-g-Lactone","D,L-Malic Acid","D-Ribose","Tween 20","L-Rhamnose","D-Fructose","Acetic Acid","D-Glucose","D-Maltose","D-Melibiose","Thymidine","L-Asparagine","D-Aspartic Acid","D-Glucosaminic Acid","1,2-Propanediol","Tween 40","a-Keto-Glutaric Acid","a-Keto-Butyric Acid","a-Methyl-D-Galactoside","a-D-Lactose","Lactulose","Sucrose","Uridine","L-Glutamine","m-Tartaric Acid","a-D-Glucose-1-Phosphate","D-Fructose-6-Phosphate","Tween 80","a-Hydroxy-Glutaric Acid-g-Lactone","a-Hydroxy-Butyric Acid","b-Methyl-D-Glucoside","Adonitol","Maltotriose","2-Deoxy-Adenosine","Adenosine","Gly-Asp","Citric Acid","myo-Inositol","D-Threonine","Fumaric Acid","Bromo-Succinic Acid","Propionic Acid","Mucic Acid","Glycolic Acid","Glyoxylic Acid","D-Cellobiose","Inosine","Gly-Glu","Tricarballylic Acid","L-Serine","L-Threonine","L-Alanine","Ala-Gly","Acetoacetic Acid","N-Acetyl-b-D-Mannosamine","Mono-Methyl Succinate","Methyl Pyruvate","D-Malic Acid","L-Malic Acid","Gly-Pro","p-Hydroxy-Phenylacetic Acid","m-Hydroxy-Phenylacetic Acid","Tyramine","D-Psicose","L-Lyxose","Glucuronamide","Pyruvic Acid","L-Galactonic Acid-g-Lactone","D-Galacturonic Acid","b-Phenylethylamine","Ethanolamine"]
