@@ -180,7 +180,11 @@ createWellInfo hm (w, anno) = HM.insert w WellInfo {annotation = anno, value = 0
 
 -- | Generate a list of all possible wells for Well
 -- This information will be combined with the appropriate label
--- given the plate type in createExperiment
+-- given the plate type in createExperiment.
+-- Because Type Well derives Enum and Bounded, we can use the
+-- minBound and the infinite list to automatically return the
+-- odered list of all Data Constructors for Well. In our case
+-- this is A01 .. H12.
 allWells :: [Well]
 allWells = [(minBound :: Well) ..]
 
