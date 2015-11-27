@@ -27,7 +27,7 @@ import           Text.Read
 import           Text.Show
 import Data.Hashable
 import GHC.Generics               (Generic)
-import Data.List (zip3, concatMap)
+import Data.List (zip3, concatMap, transpose)
 import Data.Foldable (foldl')
 import Data.Function ((.), ($))
 import Data.Functor (fmap)
@@ -53,8 +53,9 @@ data Well = A01 | A02 | A03 | A04 | A05 | A06 | A07 | A08 | A09 | A10 | A11 | A1
 instance Hashable Well
 
 data WellInfo = WellInfo{annotation :: T.Text
-                        ,value :: Float
-                        ,hour :: Float
+                        ,values :: [T.Text]
+                        ,summaryValue :: Float
+                        ,hour :: [T.Text]
 } deriving (Eq, Show, Read)
 
 -- | All 20 possible plates defined for the omnilog system.
@@ -112,14 +113,14 @@ createExperiment :: (T.Text, T.Text) -> Experiment
 createExperiment (header, eData) =
     Experiment thePlate theWells theMetadata
       where
-        theMetadata = getMetadata header
-        thePlate = getPlate $ HM.lookupDefault (error "Unknown Plate Type") "Plate Type" $ unMetadata theMetadata
-        theWells = getWells thePlate eData
+        theMetadata = createMetadata header
+        thePlate = createPlate $ HM.lookupDefault (error "Unknown Plate Type") "Plate Type" $ unMetadata theMetadata
+        theWells = createWells thePlate eData
 
 
 -- | Parse the header for plate metadata
-getMetadata :: T.Text -> Metadata
-getMetadata h = Metadata m
+createMetadata :: T.Text -> Metadata
+createMetadata h = Metadata m
   where
     m = foldl' parseHeaderLine HM.empty (T.lines h)
 
@@ -141,8 +142,8 @@ parseHeaderLine hm t = HM.insert k v hm
 
 -- | Returns an actual plate Type based on the
 -- metadata text.
-getPlate :: T.Text -> Plate
-getPlate x = case x of
+createPlate :: T.Text -> Plate
+createPlate x = case x of
     "PM1" -> PM1 "Carbon utilization assays"
     "PM2" -> PM2 "Carbon utilization assays"
     "PM3" -> PM3 "Nitrogen utilization assays"
@@ -170,23 +171,33 @@ getPlate x = case x of
  -- Plate type. We zip the wells with the annotations to ensure
  -- proper matching of the terms in createWellInfo. The actual data for the
  -- plate is sent as a single Text string, that needs to be parsed and zipped
- -- along with the well name
-getWells :: Plate
+ -- along with the well name.
+ -- We need to get columns from the data, rather than the rows that we are
+ -- given from reading in the data. The first row of the omnilog data
+ -- should be ["Hour", "A01" ... ], so we use the transpose function to create
+ -- columns rather than rows.
+createWells :: Plate
          -> T.Text
          -> HM.HashMap Well WellInfo
-getWells p eData = case p of
-    PM10 _ -> foldl' createWellInfo HM.empty $ zip3 allWells pm1Annotations
-                wellValues
+createWells p eData = case p of
+    PM10 _ -> foldl' (createWellInfo hourColumn) HM.empty $ zip3 allWells pm1Annotations
+                dataColumns
       where
         splitLines = fmap (fmap T.strip . T.split (==',')) $ T.lines eData
-        wellValues = splitLines
+        (hourColumn:dataColumns) = transpose splitLines
 
 
-createWellInfo :: HM.HashMap Well WellInfo
+
+createWellInfo :: [T.Text]
+               -> HM.HashMap Well WellInfo
                -> (Well, T.Text, [T.Text])
                -> HM.HashMap Well WellInfo
-createWellInfo hm (w, anno, ds) =
-    HM.insert w WellInfo {annotation = anno, value = 0.05, hour = 0.01} hm
+createWellInfo hourColumn hm (w, anno, header:ds) =
+    HM.insert w WellInfo {annotation = anno
+                         ,values = header:ds
+                         ,hour = hourColumn
+                         ,summaryValue = 5.3} hm
+
 
 
 -- | Generate a list of all possible wells for Well
