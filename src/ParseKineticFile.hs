@@ -21,6 +21,7 @@ module ParseKineticFile
 
 import           Data.Eq
 import           Data.Ord
+import Data.Int
 import qualified Data.Text.Lazy as T
 import           Prelude        (Enum, Float, undefined, error, Bounded, minBound)
 import           Text.Read
@@ -53,9 +54,9 @@ data Well = A01 | A02 | A03 | A04 | A05 | A06 | A07 | A08 | A09 | A10 | A11 | A1
 instance Hashable Well
 
 data WellInfo = WellInfo{annotation :: T.Text
-                        ,values :: [T.Text]
+                        ,values :: [Int]
                         ,summaryValue :: Float
-                        ,hour :: [T.Text]
+                        ,hour :: [Float]
 } deriving (Eq, Show, Read)
 
 -- | All 20 possible plates defined for the omnilog system.
@@ -170,35 +171,43 @@ createPlate x = case x of
  -- | Return the well annotations as a HashMap according to the
  -- Plate type. We zip the wells with the annotations to ensure
  -- proper matching of the terms in createWellInfo. The actual data for the
- -- plate is sent as a single Text string, that needs to be parsed and zipped
- -- along with the well name.
- -- We need to get columns from the data, rather than the rows that we are
- -- given from reading in the data. The first row of the omnilog data
- -- should be ["Hour", "A01" ... ], so we use the transpose function to create
- -- columns rather than rows.
+ -- plate is sent as a single Text string to the function. It is split into
+ -- lines, and each line is split on ',' with whitespace removed. This array
+ -- of arrays contains row data, but we need to get columns from the data.
+ -- The first row of the omnilog data should be ["Hour", "A01" ... ], so we use
+ -- the transpose function to create the columns we need.
 createWells :: Plate
          -> T.Text
          -> HM.HashMap Well WellInfo
 createWells p eData = case p of
-    PM10 _ -> foldl' (createWellInfo hourColumn) HM.empty $ zip3 allWells pm1Annotations
-                dataColumns
+    PM10 _ -> foldl' (createWellInfo hourColumn) HM.empty
+                $ zip3 allWells pm1Annotations dataColumns
       where
         splitLines = fmap (fmap T.strip . T.split (==',')) $ T.lines eData
         (hourColumn:dataColumns) = transpose splitLines
 
 
-
+-- | Given a list of Hours and Data columns, all with appropriate headers,
+-- as well as the Well and annotation, return a properly formatted WellInfo.
+-- Data.Text read does not seem to support conversion using OverloadedStrings
+-- so it is manually unpacked.
 createWellInfo :: [T.Text]
                -> HM.HashMap Well WellInfo
                -> (Well, T.Text, [T.Text])
                -> HM.HashMap Well WellInfo
-createWellInfo hourColumn hm (w, anno, header:ds) =
+createWellInfo (_:hs) hm (w, anno, _:ds) =
     HM.insert w WellInfo {annotation = anno
-                         ,values = header:ds
-                         ,hour = hourColumn
-                         ,summaryValue = 5.3} hm
+                         ,values = valuesAsInt
+                         ,hour = fmap (\x -> read  (T.unpack x) :: Float) hs
+                         ,summaryValue = createSummaryValue valuesAsInt} hm
+  where
+    valuesAsInt = fmap (\x -> read (T.unpack x) :: Int) ds
 
 
+-- | Integrate the area under the curve of the kinetic data, after subtracting
+-- the initial well value from all subsequent wells.
+createSummaryValue :: [Int] -> Float
+createSummaryValue fs = 5.00
 
 -- | Generate a list of all possible wells for Well
 -- This information will be combined with the appropriate label
