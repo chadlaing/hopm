@@ -27,9 +27,10 @@ import           Text.Read
 import           Text.Show
 import Data.Hashable
 import GHC.Generics               (Generic)
-import Data.List (zip)
+import Data.List (zip3, concatMap)
 import Data.Foldable (foldl')
 import Data.Function ((.), ($))
+import Data.Functor (fmap)
 import qualified Data.HashMap.Strict as HM
 
 
@@ -53,6 +54,7 @@ instance Hashable Well
 
 data WellInfo = WellInfo{annotation :: T.Text
                         ,value :: Float
+                        ,hour :: Float
 } deriving (Eq, Show, Read)
 
 -- | All 20 possible plates defined for the omnilog system.
@@ -112,7 +114,7 @@ createExperiment (header, eData) =
       where
         theMetadata = getMetadata header
         thePlate = getPlate $ HM.lookupDefault (error "Unknown Plate Type") "Plate Type" $ unMetadata theMetadata
-        theWells = getWells thePlate
+        theWells = getWells thePlate eData
 
 
 -- | Parse the header for plate metadata
@@ -166,16 +168,25 @@ getPlate x = case x of
 
  -- | Return the well annotations as a HashMap according to the
  -- Plate type. We zip the wells with the annotations to ensure
- -- proper matching of the terms in createWellInfo
-getWells :: Plate -> HM.HashMap Well WellInfo
-getWells p = case p of
-    PM1 _ -> foldl' createWellInfo HM.empty $ zip allWells pm1Annotations
+ -- proper matching of the terms in createWellInfo. The actual data for the
+ -- plate is sent as a single Text string, that needs to be parsed and zipped
+ -- along with the well name
+getWells :: Plate
+         -> T.Text
+         -> HM.HashMap Well WellInfo
+getWells p eData = case p of
+    PM10 _ -> foldl' createWellInfo HM.empty $ zip3 allWells pm1Annotations
+                wellValues
+      where
+        splitLines = fmap (fmap T.strip . T.split (==',')) $ T.lines eData
+        wellValues = splitLines
 
 
 createWellInfo :: HM.HashMap Well WellInfo
-               -> (Well, T.Text)
+               -> (Well, T.Text, [T.Text])
                -> HM.HashMap Well WellInfo
-createWellInfo hm (w, anno) = HM.insert w WellInfo {annotation = anno, value = 0.05} hm
+createWellInfo hm (w, anno, ds) =
+    HM.insert w WellInfo {annotation = anno, value = 0.05, hour = 0.01} hm
 
 
 -- | Generate a list of all possible wells for Well
