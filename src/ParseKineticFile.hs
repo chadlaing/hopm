@@ -19,7 +19,7 @@ module ParseKineticFile
 ,createExperiment
 ) where
 
-import           Prelude        (Enum, Float, undefined, error, Bounded, minBound)
+import           Prelude        ((+), Enum, Float, undefined, error, Bounded, minBound)
 import           Data.Eq
 import           Data.Ord
 import Data.Int
@@ -36,6 +36,7 @@ import Data.Foldable (foldl')
 import Data.Function ((.), ($))
 import Data.Functor (fmap)
 import qualified Data.HashMap.Strict as HM
+import Debug.Trace
 
 
 -- | Define all possible 96 wells for the omnilog plates
@@ -201,7 +202,7 @@ createWellInfo :: [T.Text]
 createWellInfo (_:hs) hm (w, anno, _:ds) =
     HM.insert w WellInfo {annotation = anno
                          ,values = valuesAsInt
-                         ,hour = fmap createFloatFromText hs
+                         ,hour =  fmap createFloatFromText hs
                          ,summaryValue = createSummaryValue valuesAsInt} hm
   where
     valuesAsInt = fmap createIntFromText ds
@@ -211,16 +212,17 @@ createWellInfo (_:hs) hm (w, anno, _:ds) =
 -- | Using decimal from Data.Text.Read, which returns an Either, with Left
 -- being an Error and Right being a tuple of (number, non-number).
 -- Efficient conversion from T.Text to Int
+-- Link http://stackoverflow.com/questions/14296989/converting-data-text-to-int-in-haskell
 createIntFromText :: T.Text -> Int
 createIntFromText t = case decimal t of
     Right v -> fst v
     Left e -> error e
 
 
-
-
 createFloatFromText :: T.Text -> Float
-createFloatFromText _ = 7.0
+createFloatFromText t = case rational t of
+    Right v -> fst v
+    Left e -> 0
 
 
 -- | Integrate the area under the curve of the kinetic data, after subtracting
