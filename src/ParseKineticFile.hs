@@ -19,7 +19,7 @@ module ParseKineticFile
 ,createExperiment
 ) where
 
-import           Prelude        ((+), Enum, Float, undefined, error, Bounded, minBound)
+import           Prelude        ((+),(-), Enum, Float, undefined, error, Bounded, minBound, fromIntegral)
 import           Data.Eq
 import           Data.Ord
 import Data.Int
@@ -31,13 +31,14 @@ import           Text.Read
 import           Text.Show
 import Data.Hashable
 import GHC.Generics               (Generic)
-import Data.List (zip3, concatMap, transpose, length, filter)
+import Data.List (zip3, concatMap, transpose, length, filter, sum)
 import Data.Foldable (foldl')
 import Data.Function ((.), ($))
 import Data.Functor (fmap)
 import qualified Data.HashMap.Strict as HM
 import Debug.Trace
 import Control.Applicative
+import Data.Bool (otherwise)
 
 -- | Define all possible 96 wells for the omnilog plates
 -- createExperiment is used to define the proper annotations.
@@ -229,7 +230,23 @@ createFloatFromText t = case rational t of
 -- | Integrate the area under the curve of the kinetic data, after subtracting
 -- the initial well value from all subsequent wells.
 createSummaryValue :: [Int] -> Float
-createSummaryValue fs = 5.00
+createSummaryValue (x:xs) = integratedValue
+  where
+    normalizedValues = fmap (subtractInitialValue x) (x:xs)
+    integratedValue = fromIntegral (sum normalizedValues) + 5.55
+
+
+-- | To normalize the well data, we need to subtract the initial well value
+-- from all subsequent value. We also need to account for the occurrence of
+-- a negative value and set it to 0.
+subtractInitialValue :: Int -> Int -> Int
+subtractInitialValue init x
+    | subtractedValue >= 0 = subtractedValue
+    | otherwise = 0
+  where
+    subtractedValue = x - init
+
+
 
 -- | Generate a list of all possible wells for Well
 -- This information will be combined with the appropriate label
