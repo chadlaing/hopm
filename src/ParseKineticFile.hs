@@ -60,7 +60,7 @@ instance Hashable Well
 data WellInfo = WellInfo{annotation :: T.Text
                         ,values :: [Int]
                         ,summaryValue :: Float
-                        ,hour :: [T.Text]
+                        ,hour :: [Float]
 } deriving (Eq, Show, Read)
 
 -- | All 20 possible plates defined for the omnilog system.
@@ -201,8 +201,8 @@ createWellInfo :: [T.Text]
                -> HM.HashMap Well WellInfo
 createWellInfo (_:hs) hm (w, anno, _:ds) =
     HM.insert w WellInfo {annotation = anno
-                         ,values = length valuesAsInt:valuesAsInt
-                         ,hour = T.pack (show $ length valuesAsFloat) : hs
+                         ,values = valuesAsInt
+                         ,hour = valuesAsFloat
                          ,summaryValue = createSummaryValue valuesAsInt} hm
   where
     valuesAsInt = fmap createIntFromText ds
@@ -223,7 +223,7 @@ createIntFromText t = case decimal t of
 createFloatFromText :: T.Text -> Float
 createFloatFromText t = case rational t of
     Right v -> fst v
-    Left e -> 0
+    Left e -> error "Incorrect number of hour elements in plate"
 
 
 -- | Integrate the area under the curve of the kinetic data, after subtracting
