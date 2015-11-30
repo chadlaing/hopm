@@ -31,13 +31,13 @@ import           Text.Read
 import           Text.Show
 import Data.Hashable
 import GHC.Generics               (Generic)
-import Data.List (zip3, concatMap, transpose)
+import Data.List (zip3, concatMap, transpose, length, filter)
 import Data.Foldable (foldl')
 import Data.Function ((.), ($))
 import Data.Functor (fmap)
 import qualified Data.HashMap.Strict as HM
 import Debug.Trace
-
+import Control.Applicative
 
 -- | Define all possible 96 wells for the omnilog plates
 -- createExperiment is used to define the proper annotations.
@@ -60,7 +60,7 @@ instance Hashable Well
 data WellInfo = WellInfo{annotation :: T.Text
                         ,values :: [Int]
                         ,summaryValue :: Float
-                        ,hour :: [Float]
+                        ,hour :: [T.Text]
 } deriving (Eq, Show, Read)
 
 -- | All 20 possible plates defined for the omnilog system.
@@ -187,7 +187,7 @@ createWells p eData = case p of
     PM10 _ -> foldl' (createWellInfo hourColumn) HM.empty
                 $ zip3 allWells pm1Annotations dataColumns
       where
-        splitLines = fmap (fmap T.strip . T.split (==',')) $ T.lines eData
+        splitLines = filter (/="") . fmap T.strip . T.split (==',') <$> T.lines eData
         (hourColumn:dataColumns) = transpose splitLines
 
 
@@ -201,11 +201,12 @@ createWellInfo :: [T.Text]
                -> HM.HashMap Well WellInfo
 createWellInfo (_:hs) hm (w, anno, _:ds) =
     HM.insert w WellInfo {annotation = anno
-                         ,values = valuesAsInt
-                         ,hour =  fmap createFloatFromText hs
+                         ,values = length valuesAsInt:valuesAsInt
+                         ,hour = T.pack (show $ length valuesAsFloat) : hs
                          ,summaryValue = createSummaryValue valuesAsInt} hm
   where
     valuesAsInt = fmap createIntFromText ds
+    valuesAsFloat = fmap createFloatFromText hs
 
 
 
