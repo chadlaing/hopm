@@ -17,9 +17,11 @@ Parses omnilog kinetic data files into appropriate data structures for statistic
 module ParseKineticFile
 (splitHeaderData
 ,createExperiment
+,summaryValue
+,wells
 ) where
 
-import           Prelude        ((+),(-), Enum, Float, undefined, error, Bounded, minBound, fromIntegral)
+import           Prelude        ((+),(-),(++), Enum, Float, Double, undefined, error, Bounded, minBound, fromIntegral, toRational, realToFrac, logBase )
 import           Data.Eq
 import           Data.Ord
 import Data.Int
@@ -31,7 +33,7 @@ import           Text.Read
 import           Text.Show
 import Data.Hashable
 import GHC.Generics               (Generic)
-import Data.List (zip3, concatMap, transpose, length, filter, sum)
+import Data.List (zip3, concatMap, transpose, length, filter, sum, (!!), take)
 import Data.Foldable (foldl')
 import Data.Function ((.), ($))
 import Data.Functor (fmap)
@@ -39,6 +41,8 @@ import qualified Data.HashMap.Strict as HM
 import Debug.Trace
 import Control.Applicative
 import Data.Bool (otherwise)
+import Numeric.Integration.TanhSinh (parTrap, absolute, result)  -- this does not require GSL like hmatrix
+
 
 -- | Define all possible 96 wells for the omnilog plates
 -- createExperiment is used to define the proper annotations.
@@ -60,7 +64,7 @@ instance Hashable Well
 
 data WellInfo = WellInfo{annotation :: T.Text
                         ,values :: [Int]
-                        ,summaryValue :: Float
+                        ,summaryValue :: Double
                         ,hour :: [Float]
 } deriving (Eq, Show, Read)
 
@@ -204,11 +208,10 @@ createWellInfo (_:hs) hm (w, anno, _:ds) =
     HM.insert w WellInfo {annotation = anno
                          ,values = valuesAsInt
                          ,hour = valuesAsFloat
-                         ,summaryValue = createSummaryValue valuesAsInt} hm
+                         ,summaryValue = createSummaryValue valuesAsFloat valuesAsInt} hm
   where
     valuesAsInt = fmap createIntFromText ds
     valuesAsFloat = fmap createFloatFromText hs
-
 
 
 -- | Using decimal from Data.Text.Read, which returns an Either, with Left
@@ -229,11 +232,16 @@ createFloatFromText t = case rational t of
 
 -- | Integrate the area under the curve of the kinetic data, after subtracting
 -- the initial well value from all subsequent wells.
-createSummaryValue :: [Int] -> Float
-createSummaryValue (x:xs) = integratedValue
+createSummaryValue :: [Float] -> [Int] -> Double
+createSummaryValue hrs (x:xs) = integratedValue
   where
     normalizedValues = fmap (subtractInitialValue x) (x:xs)
-    integratedValue = fromIntegral (sum normalizedValues) + 5.55
+    logValues = take 120 $ fmap (logBase 2 . (+1 ) . fromIntegral) normalizedValues
+    integratedValue = sum logValues
+--     integratedValue = result $ absolute 1e-6 $ parTrap nextWellValue 0 $ fromIntegral $ length logValues
+--       where
+--         nextWellValue :: Double -> Double
+--         nextWellValue x = logValues !! x
 
 
 -- | To normalize the well data, we need to subtract the initial well value
@@ -245,7 +253,6 @@ subtractInitialValue init x
     | otherwise = 0
   where
     subtractedValue = x - init
-
 
 
 -- | Generate a list of all possible wells for Well

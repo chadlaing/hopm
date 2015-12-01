@@ -2,15 +2,16 @@
 
 module Main where
 
-import Prelude ()
+import Prelude (Double)
 import System.IO (print, IO)
 import Control.Monad (mapM, liftM, filterM)
 import System.Directory (getDirectoryContents, doesFileExist)
 import Data.Functor (fmap)
-import Data.List (filter, or, (++))
-import ParseKineticFile (splitHeaderData, createExperiment)
+import Data.List (filter, or, (++), sort)
+import ParseKineticFile (splitHeaderData, createExperiment, summaryValue, wells)
 import Data.Function ((.), ($))
 import Data.Text.Lazy.IO (readFile)
+import qualified Data.HashMap.Strict as HM
 import qualified Data.Text.Lazy as T
 
 
@@ -22,7 +23,7 @@ main = do
                         fmap (theDirectory ++) allFiles
     (a:fileContents) <- mapM readFile filteredFiles
     let summarizedData = createExperiment $ T.breakOn "Hour" a
-    print summarizedData
+    print $ sort $ fmap summaryValue $ (HM.elems . wells) summarizedData
 
 
 
