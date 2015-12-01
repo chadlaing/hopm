@@ -16,6 +16,7 @@ cabal-version:       >=1.22
 library
   hs-source-dirs:      src
   exposed-modules:     ParseKineticFile
+                     , PlateWell
   build-depends:       base >= 4.7 && < 5
                      , text
                      , unordered-containers
