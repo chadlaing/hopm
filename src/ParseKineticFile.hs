@@ -162,6 +162,16 @@ createFloatFromText t = case rational t of
     Left e -> error "Incorrect number of hour elements in plate"
 
 
+-- | Create a summary value given [Int] values for the well.
+-- First log transform the data, then integrate for the area under the curve,
+-- this AUC will be the returned value.
+createSummaryValue :: [Int] -> Double
+createSummaryValue xs = integrateList logValues
+  where
+    valuesAsDouble = fmap ((\x -> fromIntegral x ::Double) . (+1)) xs
+    logValues = take 120 $ fmap (logBase 2) valuesAsDouble
+
+
 -- | Integrate the area under the curve of the kinetic data.
 -- The integrate function is for continuous values from a -> b.
 -- We have only a list of discrete values, evenly distributed from a -> b.
@@ -174,23 +184,19 @@ createFloatFromText t = case rational t of
 -- bounding the given x, and calculates the slope. From this it calculates
 -- the y value for any x. Eg. values = [0,10,21] x = 1.1, floor x = 1, x +1 = 2,
 -- slope = 21 - 10 = 11, y = 10 + (1.1 - 1)*11 = 11.1
-createSummaryValue :: [Int] -> Double
-createSummaryValue xs = integratedValue
+integrateList :: [Double] -> Double
+integrateList xs = result $ absolute 1e-6 $ parSimpson nextWellValue 0
+                    $ fromIntegral $ length xs -1
   where
-    valuesAsDouble = fmap ((\x -> fromIntegral x ::Double) . (+1)) xs
-    logValues = take 120 $ fmap (logBase 2) valuesAsDouble
-    integratedValue = result $ absolute 1e-6 $ simpson nextWellValue 0
-                        $ fromIntegral $ length logValues -1
+    nextWellValue :: Double -> Double
+    nextWellValue x = finalValue
       where
-        nextWellValue :: Double -> Double
-        nextWellValue x = finalValue
-          where
-            listx = floor x :: Int
-            listx1 = listx + 1
-            y1 = logValues !! listx
-            y2 = logValues !! listx1
-            slope =  y2 - y1
-            finalValue = y1 + (slope * (x- fromIntegral listx))
+        listx = floor x :: Int
+        listx1 = listx + 1
+        y1 = xs !! listx
+        y2 = xs !! listx1
+        slope =  y2 - y1
+        finalValue = y1 + (slope * (x - fromIntegral listx))
 
 
 
