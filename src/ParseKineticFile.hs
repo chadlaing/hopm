@@ -184,7 +184,7 @@ createSummaryValue hrs xs = integratedValue
     integratedValue = result $ absolute 1e-6 $ simpson nextWellValue 0 $ fromIntegral $ (length logValues) -1
       where
         nextWellValue :: Double -> Double
-        nextWellValue x =trace ("x:" ++ show x ++ " listx:" ++ show listx ++ " listx1:" ++ show listx1 ++ " y1:" ++ show y1 ++ " y2:" ++ show y2 ++ " slope:" ++ show slope ++ " finalValue:" ++ show finalValue) finalValue
+        nextWellValue x = finalValue
           where
             listx = floor x :: Int
             listx1 = listx + 1
