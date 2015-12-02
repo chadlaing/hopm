@@ -17,7 +17,7 @@ Parses omnilog kinetic data files into appropriate data structures for statistic
 
 module PlateWell where
 
-import Prelude(Enum, Bounded)
+import Prelude(Enum, Bounded, error)
 import           Data.Eq
 import           Data.Ord
 import           Text.Read
@@ -53,6 +53,33 @@ data Plate = PM1{description :: T.Text}
            deriving(Ord, Eq, Show, Read)
 
 
+
+
+-- | Returns an actual plate Type based on the
+-- metadata text.
+createPlate :: T.Text -> Plate
+createPlate x = case x of
+    "PM1" -> PM1 "Carbon utilization assays"
+    "PM2" -> PM2 "Carbon utilization assays"
+    "PM3" -> PM3 "Nitrogen utilization assays"
+    "PM4" -> PM4 "Phosphorus - Sulfur utilization assays"
+    "PM5" -> PM5 "Biosynthetic pathway/nutrient stimulation"
+    "PM6" -> PM6 "Nitrogen utilization assays"
+    "PM7" -> PM7 "Nitrogen utilization assays"
+    "PM8" -> PM8 "Nitrogen utilization assays"
+    "PM9" -> PM9 "Osmotic/Ionic response assays"
+    "PM10" -> PM10 "pH response assays"
+    "PM11" -> PM11 "Bacterial chemical sensitivity assays"
+    "PM12" -> PM12 "Bacterial chemical sensitivity assays"
+    "PM13" -> PM13 "Bacterial chemical sensitivity assays"
+    "PM14" -> PM14 "Bacterial chemical sensitivity assays"
+    "PM15" -> PM15 "Bacterial chemical sensitivity assays"
+    "PM16" -> PM16 "Bacterial chemical sensitivity assays"
+    "PM17" -> PM17 "Bacterial chemical sensitivity assays"
+    "PM18" -> PM18 "Bacterial chemical sensitivity assays"
+    "PM19" -> PM19 "Bacterial chemical sensitivity assays"
+    "PM20" -> PM20 "Bacterial chemical sensitivity assays"
+    _ -> error "Unknown PM plate"
 
 
 -- | Define all possible 96 wells for the omnilog plates

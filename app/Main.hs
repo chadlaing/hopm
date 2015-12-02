@@ -8,7 +8,7 @@ import Control.Monad (mapM, liftM, filterM)
 import System.Directory (getDirectoryContents, doesFileExist)
 import Data.Functor (fmap)
 import Data.List (filter, or, (++), sort)
-import ParseKineticFile (splitHeaderData, createExperiment, summaryValue, wells)
+import ParseKineticFile (splitHeaderData, createExperiment, summaryValue, wells, maxValue)
 import Data.Function ((.), ($))
 import Data.Text.Lazy.IO (readFile)
 import qualified Data.HashMap.Strict as HM
