@@ -138,7 +138,7 @@ createWellInfo (_:hs) hm (w, anno, _:ds) =
                          ,values = normalizedValues
                          ,hour = hoursAsFloat
                          ,maxValue = maximum normalizedValues
-                         ,summaryValue = createSummaryValue hoursAsFloat normalizedValues} hm
+                         ,summaryValue = createSummaryValue normalizedValues} hm
   where
     valuesAsInt = fmap createIntFromText ds
     normalizedValues = let (x:_) = valuesAsInt in
@@ -170,18 +170,17 @@ createFloatFromText t = case rational t of
 -- from the omnilog data. When x = 1 it is Time 0.25, x = 2 is Time 0.50.
 -- We provide only the list of values and a range to integrate from (a -> b).
 -- We therefore provide a function to give the y value for any x in the
--- continuous range. This function takes the (floor x) and (x + 1) values bounding the
--- given x, and calculates the slope. From this it calculates the y value for
--- any x. Eg. values = [0,10,21] x = 1.1, floor x = 1, x +1 = 2,
+-- continuous range. This function takes the (floor x) and (x + 1) values
+-- bounding the given x, and calculates the slope. From this it calculates
+-- the y value for any x. Eg. values = [0,10,21] x = 1.1, floor x = 1, x +1 = 2,
 -- slope = 21 - 10 = 11, y = 10 + (1.1 - 1)*11 = 11.1
-createSummaryValue :: [Float] -> [Int] -> Double
-createSummaryValue hrs xs = integratedValue
+createSummaryValue :: [Int] -> Double
+createSummaryValue xs = integratedValue
   where
-    valuesPlusOne = fmap (+1) xs
-    valuesAsDouble = fmap (\x -> fromIntegral x ::Double) valuesPlusOne
-    --logValues = fmap log valuesAsDouble
+    valuesAsDouble = fmap ((\x -> fromIntegral x ::Double) . (+1)) xs
     logValues = take 120 $ fmap (logBase 2) valuesAsDouble
-    integratedValue = result $ absolute 1e-6 $ simpson nextWellValue 0 $ fromIntegral $ (length logValues) -1
+    integratedValue = result $ absolute 1e-6 $ simpson nextWellValue 0
+                        $ fromIntegral $ length logValues -1
       where
         nextWellValue :: Double -> Double
         nextWellValue x = finalValue
