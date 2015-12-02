@@ -21,7 +21,7 @@ module ParseKineticFile
 ,maxValue
 ) where
 
-import           Prelude ((+),(-),(++), Enum, Float, Double, undefined, error, Bounded, minBound, logBase, fromIntegral, round )
+import           Prelude ((+),(-),(++), (*), Enum, Float, Double, undefined, error, Bounded, minBound, logBase, fromIntegral, round, floor )
 import           Data.Eq
 import           Data.Ord
 import Data.Int
@@ -162,17 +162,38 @@ createFloatFromText t = case rational t of
     Left e -> error "Incorrect number of hour elements in plate"
 
 
--- | Integrate the area under the curve of the kinetic data, after subtracting
--- the initial well value from all subsequent wells.
+-- | Integrate the area under the curve of the kinetic data.
+-- The integrate function is for continuous values from a -> b.
+-- We have only a list of discrete values, evenly distributed from a -> b.
+-- Thus, f(x) = x, but only for integers in the range a -> b.
+-- When x = 0, it corresponds to the first value in the list (which is Time 0)
+-- from the omnilog data. When x = 1 it is Time 0.25, x = 2 is Time 0.50.
+-- We provide only the list of values and a range to integrate from (a -> b).
+-- We therefore provide a function to give the y value for any x in the
+-- continuous range. This function takes the (floor x) and (x + 1) values bounding the
+-- given x, and calculates the slope. From this it calculates the y value for
+-- any x. Eg. values = [0,10,21] x = 1.1, floor x = 1, x +1 = 2,
+-- slope = 21 - 10 = 11, y = 10 + (1.1 - 1)*11 = 11.1
 createSummaryValue :: [Float] -> [Int] -> Double
 createSummaryValue hrs xs = integratedValue
   where
-    logValues = take 120 $ fmap (logBase 2 . (+1 ) . fromIntegral) xs
---     integratedValue = sum logValues
-    integratedValue = result $ absolute 1e-6 $ parSimpson nextWellValue 0 $ fromIntegral $ (length logValues) -1
+    valuesPlusOne = fmap (+1) xs
+    valuesAsDouble = fmap (\x -> fromIntegral x ::Double) valuesPlusOne
+    --logValues = fmap log valuesAsDouble
+    logValues = take 120 $ fmap (logBase 2) valuesAsDouble
+    integratedValue = result $ absolute 1e-6 $ simpson nextWellValue 0 $ fromIntegral $ (length logValues) -1
       where
         nextWellValue :: Double -> Double
-        nextWellValue x = logValues !! (round x :: Int)
+        nextWellValue x =trace ("x:" ++ show x ++ " listx:" ++ show listx ++ " listx1:" ++ show listx1 ++ " y1:" ++ show y1 ++ " y2:" ++ show y2 ++ " slope:" ++ show slope ++ " finalValue:" ++ show finalValue) finalValue
+          where
+            listx = floor x :: Int
+            listx1 = listx + 1
+            y1 = logValues !! listx
+            y2 = logValues !! listx1
+            slope =  y2 - y1
+            finalValue = y1 + (slope * (x- fromIntegral listx))
+
+
 
 
 -- | To normalize the well data, we need to subtract the initial well value
