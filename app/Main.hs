@@ -7,8 +7,8 @@ import System.IO (print, IO)
 import Control.Monad (mapM, liftM, filterM)
 import System.Directory (getDirectoryContents, doesFileExist)
 import Data.Functor (fmap)
-import Data.List (filter, or, (++), sort)
-import ParseKineticFile (splitHeaderData, createExperiment, summaryValue, wells, maxValue)
+import Data.List (filter, or, (++), sort, take)
+import ParseKineticFile (splitHeaderData, createExperiment, createListOfExperiment, summaryValue, wells, maxValue)
 import Data.Function ((.), ($))
 import Data.Text.Lazy.IO (readFile)
 import qualified Data.HashMap.Strict as HM
@@ -21,9 +21,10 @@ main = do
     allFiles <- getDirectoryContents theDirectory
     filteredFiles <- filterM doesFileExist $
                         fmap (theDirectory ++) allFiles
-    (a:fileContents) <- mapM readFile filteredFiles
-    let summarizedData = createExperiment $ T.breakOn "Hour" a
-    print $ sort $ fmap summaryValue $ (HM.elems . wells) summarizedData
+    fileContents <- mapM readFile filteredFiles
+    let (summarizedData) = createListOfExperiment (take 100 fileContents)
+    print summarizedData
+    --print $ sort $ fmap summaryValue $ (HM.elems . wells) c
 
 
 

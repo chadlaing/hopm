@@ -16,12 +16,13 @@ Parses omnilog kinetic data files into appropriate data structures for statistic
 module ParseKineticFile
 (splitHeaderData
 ,createExperiment
+,createListOfExperiment
 ,summaryValue
 ,wells
 ,maxValue
 ) where
 
-import           Prelude ((+),(-),(++), (*), Enum, Float, Double, undefined, error, Bounded, minBound, logBase, fromIntegral, round, floor )
+import Prelude ((+),(-),(++), (*), Enum, Float, Double, undefined, error, Bounded, minBound, logBase, fromIntegral, round, floor )
 import           Data.Eq
 import           Data.Ord
 import Data.Int
@@ -37,9 +38,9 @@ import Data.Function ((.), ($))
 import Data.Functor (fmap)
 import qualified Data.HashMap.Strict as HM
 import Debug.Trace
-import Control.Applicative
 import Data.Bool (otherwise)
 import Numeric.Integration.TanhSinh
+import Control.Applicative
 import PlateWell
 
 
@@ -83,6 +84,10 @@ createExperiment (header, eData) =
         theMetadata = createMetadata header
         thePlate = createPlate $ HM.lookupDefault (error "Unknown Plate Type") "Plate Type" $ unMetadata theMetadata
         theWells = createWells thePlate eData
+
+
+createListOfExperiment :: [T.Text] -> [Experiment]
+createListOfExperiment = fmap (createExperiment . T.breakOn "Hour")
 
 
 -- | Parse the header for plate metadata
@@ -175,7 +180,8 @@ createSummaryValue xs = integrateList logValues
 -- | Integrate the area under the curve of the kinetic data.
 -- The integrate function is for continuous values from a -> b.
 -- We have only a list of discrete values, evenly distributed from a -> b.
--- Thus, f(x) = x, but only for integers in the range a -> b.
+-- Thus, f(x) = x, but only for integers in the range a -> b. Thus we employ
+-- the trapezoid rule to calculate y values for x between integer values.
 -- When x = 0, it corresponds to the first value in the list (which is Time 0)
 -- from the omnilog data. When x = 1 it is Time 0.25, x = 2 is Time 0.50.
 -- We provide only the list of values and a range to integrate from (a -> b).
