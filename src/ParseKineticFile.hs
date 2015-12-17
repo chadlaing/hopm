@@ -12,10 +12,10 @@ Parses omnilog kinetic data files into appropriate data structures for statistic
 
 
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric              #-}
 
 module ParseKineticFile
 (splitHeaderData
-,createExperiment
 ,createListOfExperiment
 ,summaryValue
 ,wells
@@ -30,6 +30,7 @@ import qualified Data.Text.Lazy as T
 import Data.Text.Lazy.Read (decimal, rational)
 import Data.Either
 import Data.Tuple (fst)
+import Data.Maybe
 import           Text.Read
 import           Text.Show
 import Data.List (zip3, concatMap, transpose, length, filter, sum, (!!), take, maximum)
@@ -41,13 +42,32 @@ import Debug.Trace
 import Data.Bool (otherwise)
 import Numeric.Integration.TanhSinh
 import Control.Applicative
+import Data.Hashable
+import GHC.Generics               (Generic)
 import PlateWell
 
 
 -- | All possible metadata for an Experiment.
 -- The required `name` and any other metadata, that will be stored
 -- as a HashMap of T.Text keys and values
-newtype Metadata = Metadata {unMetadata :: HM.HashMap T.Text T.Text} deriving(Eq, Show, Read)
+data Metadata =
+    Metadata {name :: T.Text
+             , otype :: Maybe OType
+             , htype :: Maybe HType
+             , host :: Maybe Host
+             , date :: Maybe T.Text
+             , pm :: Maybe Plate
+             , other :: [T.Text]
+    } deriving(Eq, Show, Read)
+
+defaultMetadata :: Metadata
+defaultMetadata = Metadata "" Nothing Nothing Nothing Nothing Nothing []
+
+
+-- | Possible metadata types
+newtype OType  = OType {unOType :: T.Text} deriving (Eq, Show, Read)
+newtype HType = HType {unHType :: T.Text} deriving (Eq, Show, Read)
+newtype Host = Host {unHost :: T.Text} deriving (Eq, Show, Read)
 
 
 data WellInfo = WellInfo{annotation :: T.Text
@@ -60,8 +80,7 @@ data WellInfo = WellInfo{annotation :: T.Text
 
 -- | The Experiment type contains Plate, Well and Metadata information.
 -- Created only indirectly through createExperiment
-data Experiment = Experiment{plate :: Plate
-                            ,wells :: HM.HashMap Well WellInfo
+data Experiment = Experiment{wells :: HM.HashMap Well WellInfo
                             ,meta :: Metadata
 } deriving(Eq, Show, Read)
 
@@ -79,32 +98,46 @@ splitHeaderData = T.breakOn "Hour"
 -- well values.
 createExperiment :: (T.Text, T.Text) -> Experiment
 createExperiment (header, eData) =
-    Experiment thePlate theWells theMetadata
+    Experiment theWells theMetadata
       where
         theMetadata = createMetadata header
-        thePlate = createPlate $ HM.lookupDefault (error "Unknown Plate Type") "Plate Type" $ unMetadata theMetadata
-        theWells = createWells thePlate eData
+        theWells = case pm theMetadata of
+                    Just v -> createWells v eData
+                    Nothing -> error "Unknowmn PM plate"
 
 
+-- | This is the function exported from the module.
+-- Uses createExperiment to map over all files.
 createListOfExperiment :: [T.Text] -> [Experiment]
 createListOfExperiment = fmap (createExperiment . T.breakOn "Hour")
 
 
+-- groupExperiemntBy :: [Experiment] ->
+
+
+
+
 -- | Parse the header for plate metadata
 createMetadata :: T.Text -> Metadata
-createMetadata h = Metadata m
+createMetadata h = m
   where
-    m = foldl' parseHeaderLine HM.empty (T.lines h)
+    m = foldl' parseHeaderLine defaultMetadata (T.lines h)
 
 
 -- | Split each header line, add the key value pair to
 -- the HashMap, and return the whole thing for Metadata.
 -- Remove the delimiter and all trailing space from both
 -- the keys and the values.
-parseHeaderLine :: HM.HashMap T.Text T.Text
+parseHeaderLine :: Metadata
                 -> T.Text
-                -> HM.HashMap T.Text T.Text
-parseHeaderLine hm t = HM.insert k v hm
+                -> Metadata
+parseHeaderLine md t = case k of
+    "Strain Name" -> md {name = v}
+    "Plate Type" -> md {pm = Just $ createPlate v}
+    "O-type" -> md {otype = Just $ OType v}
+    "H-type" -> md {htype = Just $ HType v}
+    "Date" -> md {date = Just v}
+    _ -> md {other = v:other md}
   where
     (kk, vv) = T.breakOn "," t
     k = T.strip kk
