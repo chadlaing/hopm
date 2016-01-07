@@ -50,24 +50,32 @@ import PlateWell
 -- | All possible metadata for an Experiment.
 -- The required `name` and any other metadata, that will be stored
 -- as a HashMap of T.Text keys and values
-data Metadata =
-    Metadata {name :: T.Text
-             , otype :: Maybe OType
-             , htype :: Maybe HType
-             , host :: Maybe Host
-             , date :: Maybe T.Text
-             , pm :: Maybe Plate
-             , other :: [T.Text]
-    } deriving(Eq, Show, Read)
+data Metadata = Name {unMetadata :: T.Text}
+              | OType {unMetadata :: T.Text}
+              | HType {unMetadata :: T.Text}
+              | IsolationHost  {unMetadata :: T.Text}
+              | IsolationDate {unMetadata :: T.Text}
+              | PM {unMetadata :: Plate}
+              | Other {unMetadata :: [T.Text]}
+              deriving(Eq, Show, Read)
+-- data Metadata =
+--     Metadata {name :: T.Text
+--              , otype :: Maybe OType
+--              , htype :: Maybe HType
+--              , host :: Maybe Host
+--              , date :: Maybe T.Text
+--              , pm :: Maybe Plate
+--              , other :: [T.Text]
+--     } deriving(Eq, Show, Read)
 
-defaultMetadata :: Metadata
-defaultMetadata = Metadata "" Nothing Nothing Nothing Nothing Nothing []
+-- defaultMetadata :: Metadata
+-- defaultMetadata = Metadata "" Nothing Nothing Nothing Nothing Nothing []
 
 
--- | Possible metadata types
-newtype OType  = OType {unOType :: T.Text} deriving (Eq, Show, Read)
-newtype HType = HType {unHType :: T.Text} deriving (Eq, Show, Read)
-newtype Host = Host {unHost :: T.Text} deriving (Eq, Show, Read)
+-- -- | Possible metadata types
+-- newtype OType  = OType {unOType :: T.Text} deriving (Eq, Show, Read)
+-- newtype HType = HType {unHType :: T.Text} deriving (Eq, Show, Read)
+-- newtype Host = Host {unHost :: T.Text} deriving (Eq, Show, Read)
 
 
 data WellInfo = WellInfo{annotation :: T.Text
@@ -112,7 +120,9 @@ createListOfExperiment :: [T.Text] -> [Experiment]
 createListOfExperiment = fmap (createExperiment . T.breakOn "Hour")
 
 
--- groupExperiemntBy :: [Experiment] ->
+-- | Create collections of Experiments grouped by any of the Metadata
+-- fields.
+groupExperiemntBy :: [Experiment] ->
 
 
 
@@ -260,3 +270,5 @@ subtractInitialValue init x
 -- this is A01 .. H12.
 allWells :: [Well]
 allWells = [(minBound :: Well) ..]
+
+-- | To L-Histidine +pH 4.5", calues = [0,0,1,1,1,1,1,2,,4,4,4,
