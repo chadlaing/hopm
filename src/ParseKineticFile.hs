@@ -58,21 +58,16 @@ data Meta = Name T.Text
           | Other [T.Text]
           deriving(Eq, Show, Read)
 
--- | Define the UnMeta class
-class UnMeta a where
-    unMeta :: a -> T.Text
-
--- | The only instance is for Meta, where every data constructor is provided
--- an unMeta function.
-instance UnMeta Meta where
-    unMeta (Name a) = a
-    unMeta (OType a) = fromMaybe "" a
-    unMeta (HType a) = fromMaybe "" a
-    unMeta (IsolationHost a) = fromMaybe "" a
-    unMeta (IsolationDate a ) = fromMaybe "" a
-    unMeta (PM (Just a)) = description a
-    unMeta (PM Nothing) = ""
-    unMeta (Other [a]) = T.concat [a]
+unMeta :: Meta -> T.Text
+unMeta x = case x of
+    Name a -> a
+    OType a -> fromMaybe "" a
+    HType a -> fromMaybe "" a
+    IsolationHost a -> fromMaybe "" a
+    IsolationDate a -> fromMaybe "" a
+    PM (Just a) -> description a
+    PM Nothing -> ""
+    Other [a] -> T.concat [a]
 
 
 -- | Defining a Data Record to store all the metadata for each experiment.
