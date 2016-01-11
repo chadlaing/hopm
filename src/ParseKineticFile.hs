@@ -45,19 +45,40 @@ import Control.Applicative
 import PlateWell
 
 
+data Meta = Name T.Text
+          | OType (Maybe T.Text)
+          | HType (Maybe T.Text)
+          | IsolationHost (Maybe T.Text)
+          | IsolationDate (Maybe T.Text)
+          | PM (Maybe Plate)
+          | Other [T.Text]
+          deriving(Eq, Show, Read)
+
+class UnMeta a where
+    unMeta :: a -> T.Text
+
+instance UnMeta Meta where
+    unMeta (Name a) = a
+--     unMeta Name a = a
+--     unMeta OType a = fromMaybe "" a
+--     unMeta HType a = fromMaybe "" a
+
+
 data Metadata =
-    Metadata {name :: T.Text
-             , otype :: Maybe T.Text
-             , htype :: Maybe T.Text
-             , host :: Maybe T.Text
-             , date :: Maybe T.Text
-             , pm :: Maybe Plate
-             , other :: [T.Text]
+    Metadata {name :: Meta
+             , otype :: Meta
+             , htype :: Meta
+             , host :: Meta
+             , date :: Meta
+             , pm :: Meta
+             , other :: Meta
     } deriving(Eq, Show, Read)
 
 
 defaultMetadata :: Metadata
-defaultMetadata = Metadata "" Nothing Nothing Nothing Nothing Nothing []
+defaultMetadata = Metadata (Name "") (OType Nothing) (HType Nothing)
+                    (IsolationHost Nothing) (IsolationDate Nothing) (PM Nothing)
+                    (Other [])
 
 
 data WellInfo = WellInfo{annotation :: T.Text
@@ -92,8 +113,8 @@ createExperiment (header, eData) =
       where
         theMetadata = createMetadata header
         theWells = case pm theMetadata of
-                    Just v -> createWells v eData
-                    Nothing -> error "Unknowmn PM plate"
+                    PM (Just v) -> createWells v eData
+                    PM Nothing -> error "Unknowmn PM plate"
 
 
 -- | This is the function exported from the module.
@@ -104,7 +125,8 @@ createListOfExperiment = fmap (createExperiment . T.breakOn "Hour")
 
 -- | Create collections of Experiments grouped by any of the Metadata
 -- fields.
---groupExperiemntBy :: [Experiment] ->
+-- groupExperimentBy :: [Experiment] -> HM T.Text [Experiment]
+-- groupExperimentBy
 
 
 
@@ -124,13 +146,13 @@ parseHeaderLine :: Metadata
                 -> T.Text
                 -> Metadata
 parseHeaderLine md t = case k of
-    "Strain Name" -> md {name = v}
-    "Plate Type" -> md {pm = Just $ createPlate v}
-    "O-type" -> md {otype = Just v}
-    "H-type" -> md {htype = Just v}
-    "Date" -> md {date = Just v}
-    "Host" -> md {host = Just v}
-    _ -> md {other = v: other md}
+    "Strain Name" -> md {name = Name v}
+    "Plate Type" -> md {pm = PM $ Just $ createPlate v}
+    "O-type" -> md {otype = OType $ Just v}
+    "H-type" -> md {htype = HType $ Just v}
+    "Date" -> md {date = IsolationDate $ Just v}
+    "Host" -> md {host = IsolationHost $ Just v}
+    _ -> md {other = Other [v]}
   where
     (kk, vv) = T.breakOn "," t
     k = T.strip kk
