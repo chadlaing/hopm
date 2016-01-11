@@ -155,7 +155,7 @@ addExperimentToGroup :: (Metadata -> Meta)
                      -> HM.HashMap T.Text [Experiment]
 addExperimentToGroup md hm x = HM.insert metaKey expList hm
   where
-    metaKey = unMeta $ md $ meta x
+    metaKey = (unMeta . md . meta) x
     expList = x:HM.lookupDefault [] metaKey hm
 
 
