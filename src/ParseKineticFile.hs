@@ -59,9 +59,13 @@ class UnMeta a where
 
 instance UnMeta Meta where
     unMeta (Name a) = a
---     unMeta Name a = a
---     unMeta OType a = fromMaybe "" a
---     unMeta HType a = fromMaybe "" a
+    unMeta (OType a) = fromMaybe "" a
+    unMeta (HType a) = fromMaybe "" a
+    unMeta (IsolationHost a) = fromMaybe "" a
+    unMeta (IsolationDate a ) = fromMaybe "" a
+    unMeta (PM (Just a)) = description a
+    unMeta (PM Nothing) = ""
+    unMeta (Other [a]) = T.concat [a]
 
 
 data Metadata =
