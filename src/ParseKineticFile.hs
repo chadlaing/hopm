@@ -44,7 +44,9 @@ import Numeric.Integration.TanhSinh
 import Control.Applicative
 import PlateWell
 
-
+-- | We are using a Meta Type to hold all of the Metadata for each experiment.
+-- The data itself is storec in a Metadata record, with each field being of type
+-- Meta. The unMeta instance for Meta returns a T.Text of every field.
 data Meta = Name T.Text
           | OType (Maybe T.Text)
           | HType (Maybe T.Text)
@@ -54,9 +56,12 @@ data Meta = Name T.Text
           | Other [T.Text]
           deriving(Eq, Show, Read)
 
+-- | Define the UnMeta class
 class UnMeta a where
     unMeta :: a -> T.Text
 
+-- | The only instance is for Meta, where every data constructor is provided
+-- an unMeta function.
 instance UnMeta Meta where
     unMeta (Name a) = a
     unMeta (OType a) = fromMaybe "" a
@@ -68,6 +73,7 @@ instance UnMeta Meta where
     unMeta (Other [a]) = T.concat [a]
 
 
+-- | Defining a Data Record to store all the metadata for each experiment.
 data Metadata =
     Metadata {name :: Meta
              , otype :: Meta
@@ -79,12 +85,14 @@ data Metadata =
     } deriving(Eq, Show, Read)
 
 
+-- | Self explanatory
 defaultMetadata :: Metadata
 defaultMetadata = Metadata (Name "") (OType Nothing) (HType Nothing)
                     (IsolationHost Nothing) (IsolationDate Nothing) (PM Nothing)
                     (Other [])
 
 
+-- | The metadata for each well
 data WellInfo = WellInfo{annotation :: T.Text
                         ,values :: [Int]
                         ,summaryValue :: Double
