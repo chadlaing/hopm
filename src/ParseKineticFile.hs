@@ -12,7 +12,7 @@ Parses omnilog kinetic data files into appropriate data structures for statistic
 
 
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE DeriveGeneric              #-}
+
 
 module ParseKineticFile
 (splitHeaderData
@@ -42,20 +42,8 @@ import Debug.Trace
 import Data.Bool (otherwise)
 import Numeric.Integration.TanhSinh
 import Control.Applicative
-import Data.Hashable
-import GHC.Generics               (Generic)
 import PlateWell
 
-
--- | All possible metadata for an Experiment.
--- data Metadata = Name {unMetadata :: T.Text}
---               | OType {unMetadata :: T.Text}
---               | HType {unMetadata :: T.Text}
---               | IsolationHost  {unMetadata :: T.Text}
---               | IsolationDate {unMetadata :: T.Text}
---               | PM {unMetadata :: Plate}
---               | Other {unMetadata :: [T.Text]}
---               deriving(Eq, Show, Read)
 
 data Metadata =
     Metadata {name :: T.Text
@@ -66,6 +54,7 @@ data Metadata =
              , pm :: Maybe Plate
              , other :: [T.Text]
     } deriving(Eq, Show, Read)
+
 
 defaultMetadata :: Metadata
 defaultMetadata = Metadata "" Nothing Nothing Nothing Nothing Nothing []
