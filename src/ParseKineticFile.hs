@@ -48,8 +48,6 @@ import PlateWell
 
 
 -- | All possible metadata for an Experiment.
--- The required `name` and any other metadata, that will be stored
--- as a HashMap of T.Text keys and values
 data Metadata = Name {unMetadata :: T.Text}
               | OType {unMetadata :: T.Text}
               | HType {unMetadata :: T.Text}
@@ -58,15 +56,16 @@ data Metadata = Name {unMetadata :: T.Text}
               | PM {unMetadata :: Plate}
               | Other {unMetadata :: [T.Text]}
               deriving(Eq, Show, Read)
--- data Metadata =
---     Metadata {name :: T.Text
---              , otype :: Maybe OType
---              , htype :: Maybe HType
---              , host :: Maybe Host
---              , date :: Maybe T.Text
---              , pm :: Maybe Plate
---              , other :: [T.Text]
---     } deriving(Eq, Show, Read)
+
+data Metadata =
+    Metadata {name :: T.Text
+             , otype :: Maybe OType
+             , htype :: Maybe HType
+             , host :: Maybe Host
+             , date :: Maybe T.Text
+             , pm :: Maybe Plate
+             , other :: [T.Text]
+    } deriving(Eq, Show, Read)
 
 -- defaultMetadata :: Metadata
 -- defaultMetadata = Metadata "" Nothing Nothing Nothing Nothing Nothing []
@@ -109,7 +108,7 @@ createExperiment (header, eData) =
     Experiment theWells theMetadata
       where
         theMetadata = createMetadata header
-        theWells = case pm theMetadata of
+        theWells = createWells
                     Just v -> createWells v eData
                     Nothing -> error "Unknowmn PM plate"
 
@@ -122,7 +121,7 @@ createListOfExperiment = fmap (createExperiment . T.breakOn "Hour")
 
 -- | Create collections of Experiments grouped by any of the Metadata
 -- fields.
-groupExperiemntBy :: [Experiment] ->
+--groupExperiemntBy :: [Experiment] ->
 
 
 
@@ -131,7 +130,7 @@ groupExperiemntBy :: [Experiment] ->
 createMetadata :: T.Text -> Metadata
 createMetadata h = m
   where
-    m = foldl' parseHeaderLine defaultMetadata (T.lines h)
+    m = foldl' parseHeaderLine (Other []) (T.lines h)
 
 
 -- | Split each header line, add the key value pair to
@@ -142,12 +141,13 @@ parseHeaderLine :: Metadata
                 -> T.Text
                 -> Metadata
 parseHeaderLine md t = case k of
-    "Strain Name" -> md {name = v}
-    "Plate Type" -> md {pm = Just $ createPlate v}
-    "O-type" -> md {otype = Just $ OType v}
-    "H-type" -> md {htype = Just $ HType v}
-    "Date" -> md {date = Just v}
-    _ -> md {other = v:other md}
+    "Strain Name" -> Name v
+    "Plate Type" -> PM $ createPlate v
+    "O-type" -> OType v
+    "H-type" -> HType v
+    "Date" -> IsolationDate v
+    "Host" -> IsolationHost v
+    _ -> Other [v:md]
   where
     (kk, vv) = T.breakOn "," t
     k = T.strip kk
