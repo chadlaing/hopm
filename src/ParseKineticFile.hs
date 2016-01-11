@@ -58,6 +58,9 @@ data Meta = Name T.Text
           | Other [T.Text]
           deriving(Eq, Show, Read)
 
+
+-- | For any of the Meta types, we provide the way to T.Text.
+-- This is most useful for out groupExperimentBy function.
 unMeta :: Meta -> T.Text
 unMeta x = case x of
     Name a -> a
