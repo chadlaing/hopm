@@ -20,6 +20,8 @@ module ParseKineticFile
 ,summaryValue
 ,wells
 ,maxValue
+,groupExperimentBy
+,otype
 ) where
 
 import Prelude ((+),(-),(++), (*), Enum, Float, Double, undefined, error, Bounded, minBound, logBase, fromIntegral, round, floor )
