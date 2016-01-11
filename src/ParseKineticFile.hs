@@ -136,11 +136,27 @@ createListOfExperiment = fmap (createExperiment . T.breakOn "Hour")
 
 
 -- | Create collections of Experiments grouped by any of the Metadata
--- fields.
--- groupExperimentBy :: [Experiment] -> HM T.Text [Experiment]
--- groupExperimentBy
+-- fields. Take in the Meta type, followed by the list of experiments to
+-- generate a hashmap of every instance of that type, and the [Experiment].
+-- For example `groupExperimentBy OType [Experiment]` would generate
+-- "O157" --> [Experiment], "O26" --> [Experiment], ...
+-- Once the data is partitioned, summary statistics comparing the [Experiment]
+-- for each group can be conducted.
+groupExperimentBy :: (Metadata -> Meta)
+                  -> [Experiment]
+                  -> HM.HashMap T.Text [Experiment]
+groupExperimentBy md = foldl' (addExperimentToGroup md) HM.empty
 
 
+-- | Add each individual plate to the appropriate metadata category
+addExperimentToGroup :: (Metadata -> Meta)
+                     -> HM.HashMap T.Text [Experiment]
+                     -> Experiment
+                     -> HM.HashMap T.Text [Experiment]
+addExperimentToGroup md hm x = HM.insert metaKey expList hm
+  where
+    metaKey = unMeta $ md $ meta x
+    expList = x:HM.lookupDefault [] metaKey hm
 
 
 -- | Parse the header for plate metadata
