@@ -48,33 +48,27 @@ import PlateWell
 
 
 -- | All possible metadata for an Experiment.
-data Metadata = Name {unMetadata :: T.Text}
-              | OType {unMetadata :: T.Text}
-              | HType {unMetadata :: T.Text}
-              | IsolationHost  {unMetadata :: T.Text}
-              | IsolationDate {unMetadata :: T.Text}
-              | PM {unMetadata :: Plate}
-              | Other {unMetadata :: [T.Text]}
-              deriving(Eq, Show, Read)
+-- data Metadata = Name {unMetadata :: T.Text}
+--               | OType {unMetadata :: T.Text}
+--               | HType {unMetadata :: T.Text}
+--               | IsolationHost  {unMetadata :: T.Text}
+--               | IsolationDate {unMetadata :: T.Text}
+--               | PM {unMetadata :: Plate}
+--               | Other {unMetadata :: [T.Text]}
+--               deriving(Eq, Show, Read)
 
 data Metadata =
     Metadata {name :: T.Text
-             , otype :: Maybe OType
-             , htype :: Maybe HType
-             , host :: Maybe Host
+             , otype :: Maybe T.Text
+             , htype :: Maybe T.Text
+             , host :: Maybe T.Text
              , date :: Maybe T.Text
              , pm :: Maybe Plate
              , other :: [T.Text]
     } deriving(Eq, Show, Read)
 
--- defaultMetadata :: Metadata
--- defaultMetadata = Metadata "" Nothing Nothing Nothing Nothing Nothing []
-
-
--- -- | Possible metadata types
--- newtype OType  = OType {unOType :: T.Text} deriving (Eq, Show, Read)
--- newtype HType = HType {unHType :: T.Text} deriving (Eq, Show, Read)
--- newtype Host = Host {unHost :: T.Text} deriving (Eq, Show, Read)
+defaultMetadata :: Metadata
+defaultMetadata = Metadata "" Nothing Nothing Nothing Nothing Nothing []
 
 
 data WellInfo = WellInfo{annotation :: T.Text
@@ -108,7 +102,7 @@ createExperiment (header, eData) =
     Experiment theWells theMetadata
       where
         theMetadata = createMetadata header
-        theWells = createWells
+        theWells = case pm theMetadata of
                     Just v -> createWells v eData
                     Nothing -> error "Unknowmn PM plate"
 
@@ -130,7 +124,7 @@ createListOfExperiment = fmap (createExperiment . T.breakOn "Hour")
 createMetadata :: T.Text -> Metadata
 createMetadata h = m
   where
-    m = foldl' parseHeaderLine (Other []) (T.lines h)
+    m = foldl' parseHeaderLine defaultMetadata (T.lines h)
 
 
 -- | Split each header line, add the key value pair to
@@ -141,13 +135,13 @@ parseHeaderLine :: Metadata
                 -> T.Text
                 -> Metadata
 parseHeaderLine md t = case k of
-    "Strain Name" -> Name v
-    "Plate Type" -> PM $ createPlate v
-    "O-type" -> OType v
-    "H-type" -> HType v
-    "Date" -> IsolationDate v
-    "Host" -> IsolationHost v
-    _ -> Other [v:md]
+    "Strain Name" -> md {name = v}
+    "Plate Type" -> md {pm = Just $ createPlate v}
+    "O-type" -> md {otype = Just v}
+    "H-type" -> md {htype = Just v}
+    "Date" -> md {date = Just v}
+    "Host" -> md {host = Just v}
+    _ -> md {other = v: other md}
   where
     (kk, vv) = T.breakOn "," t
     k = T.strip kk
