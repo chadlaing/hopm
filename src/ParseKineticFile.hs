@@ -22,6 +22,7 @@ module ParseKineticFile
 ,maxValue
 ,groupExperimentBy
 ,otype
+,name
 ) where
 
 import Prelude ((+),(-),(++), (*), Enum, Float, Double, undefined, error, Bounded, minBound, logBase, fromIntegral, round, floor )
@@ -157,6 +158,36 @@ addExperimentToGroup md hm x = HM.insert metaKey expList hm
   where
     metaKey = (unMeta . md . meta) x
     expList = x:HM.lookupDefault [] metaKey hm
+
+
+-- | For whatever groups has been created, summarize each list of experiments
+-- into a single summary Experiment
+summarizeGroup :: HM.HashMap T.Text [Experiment]
+               -> HM.HashMap T.Text Experiment
+summarizeGroup = HM.mapWithKey summarizeExp
+
+
+summarizeExp :: T.Text
+             -> [Experiment]
+             -> Experiment
+summarizeExp k v = foldl'
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 -- | Parse the header for plate metadata
