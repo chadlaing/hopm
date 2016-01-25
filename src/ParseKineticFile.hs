@@ -61,7 +61,7 @@ data Meta = Name T.Text
 
 
 -- | For any of the Meta types, we provide the way to T.Text.
--- This is most useful for out groupExperimentBy function.
+-- This is most useful for our groupExperimentBy function.
 unMeta :: Meta -> T.Text
 unMeta x = case x of
     Name a -> a
@@ -160,19 +160,32 @@ addExperimentToGroup md hm x = HM.insert metaKey expList hm
     expList = x:HM.lookupDefault [] metaKey hm
 
 
--- | For whatever groups has been created, summarize each list of experiments
--- into a single summary Experiment
+-- Convenience type
+type PMResult = HM.HashMap T.Text (HM.HashMap Plate (HM.HashMap Well WellInfo))
+
+-- | For whatever groups have been created, summarize each list of experiments
+-- into a single summary PM plate
 summarizeGroup :: HM.HashMap T.Text [Experiment]
-               -> HM.HashMap T.Text Experiment
+               -> HM.HashMap T.Text PMResult
 summarizeGroup = HM.mapWithKey summarizeExp
 
 
+-- | We will grab the maximum AUC value for each well of the same PM plate
 summarizeExp :: T.Text
              -> [Experiment]
-             -> Experiment
-summarizeExp k v = foldl'
+             -> PMResult
+summarizeExp k = foldl' (maxAucValue k) HM.empty
 
-
+-- | Combine all the same PMs into a single entry
+maxAucValue :: T.Text
+            -> PMResult
+            -> Experiment
+            -> PMResult
+maxAucValue tk pmr x =
+    HM.insert tk (HM.insert (createPlate "PM1") (HM.empty) HM.empty) HM.empty
+  where
+    rplate = undefined
+    hmp = fromMaybe HM.empty (HM.lookup tk pmr)
 
 
 

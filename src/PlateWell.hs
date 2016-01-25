@@ -50,9 +50,9 @@ data Plate = PM1{description :: T.Text}
            | PM18{description :: T.Text}
            | PM19{description :: T.Text}
            | PM20{description :: T.Text}
-           deriving(Ord, Eq, Show, Read)
+           deriving(Ord, Eq, Show, Read, Generic)
 
-
+instance Hashable Plate
 
 
 -- | Returns an actual plate Type based on the
