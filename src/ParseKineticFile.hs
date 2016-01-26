@@ -167,28 +167,31 @@ type PMResult = HM.HashMap T.Text (HM.HashMap Plate (HM.HashMap Well WellInfo))
 -- | For whatever groups have been created, summarize each list of experiments
 -- into a single summary PM plate
 summarizeGroup :: HM.HashMap T.Text [Experiment]
-               -> HM.HashMap T.Text PMResult
-summarizeGroup = HM.mapWithKey summarizeExp
+               -> PMResult
+summarizeGroup = HM.foldlWithKey' summarizeExp HM.empty
 
 
 -- | We will grab the maximum AUC value for each well of the same PM plate
-summarizeExp :: T.Text
+summarizeExp :: PMResult
+             -> T.Text
              -> [Experiment]
              -> PMResult
-summarizeExp k = foldl' (maxAucValue k) HM.empty
+summarizeExp pmr k xs = HM.insert k summedValue pmr
+  where
+    previousHmp = fromMaybe HM.empty (HM.lookup k pmr)
+    summedValue = foldl' maxAucValue previousHmp xs
 
 
 -- | Combine all the same PMs into a single entry
-maxAucValue :: T.Text
-            -> PMResult
+maxAucValue :: HM.HashMap Plate (HM.HashMap Well WellInfo)
             -> Experiment
-            -> PMResult
-maxAucValue tk pmr x =
-    HM.insert tk (HM.insert pmPlate summarizedWellsHM hmp) pmr
+            -> HM.HashMap Plate (HM.HashMap Well WellInfo)
+maxAucValue hmp x =
+    HM.insert pmPlate summarizedWellsHM hmp
   where
-    hmp = fromMaybe HM.empty (HM.lookup tk pmr)
     hmw = fromMaybe HM.empty (HM.lookup pmPlate hmp)
-    summarizedWellsHM = foldl' (condenseWells (wells x)) hmw allWells
+    summarizedWellsHM = foldl' (condenseWells newWellHM) hmw allWells
+    newWellHM = wells x
     pmPlate = case (pm . meta) x of
         PM (Just a) -> a
         PM Nothing -> error "No pm plate available"
@@ -204,6 +207,7 @@ condenseWells :: HM.HashMap Well WellInfo
               -> Well
               -> HM.HashMap Well WellInfo
 condenseWells nw hm w
+    | HM.null hm = nw
     | newValue > oldValue = HM.insert w newWells hm
     | otherwise = hm
   where

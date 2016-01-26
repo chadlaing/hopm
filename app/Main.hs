@@ -25,8 +25,6 @@ main = do
     let summarizedData = createListOfExperiment (take 10 fileContents)
     let groupedData = groupExperimentBy name summarizedData
     let condensedGroupedData = summarizeGroup groupedData
-    let cKeys = HM.keys condensedGroupedData
-    print $ fmap (\x -> HM.lookup x condensedGroupedData) cKeys
     print condensedGroupedData
     --print $ sort $ fmap summaryValue $ (HM.elems . wells) c
 
