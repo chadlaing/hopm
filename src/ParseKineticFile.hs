@@ -184,7 +184,7 @@ maxAucValue :: T.Text
             -> Experiment
             -> PMResult
 maxAucValue tk pmr x =
-    HM.insert tk (HM.insert pmPlate HM.empty hmp) pmr
+    HM.insert tk (HM.insert pmPlate summarizedWellsHM hmp) pmr
   where
     hmp = fromMaybe HM.empty (HM.lookup tk pmr)
     hmw = fromMaybe HM.empty (HM.lookup pmPlate hmp)
