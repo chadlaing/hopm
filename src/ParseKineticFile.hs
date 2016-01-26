@@ -176,31 +176,40 @@ summarizeExp :: T.Text
              -> PMResult
 summarizeExp k = foldl' (maxAucValue k) HM.empty
 
+
 -- | Combine all the same PMs into a single entry
 maxAucValue :: T.Text
             -> PMResult
             -> Experiment
             -> PMResult
 maxAucValue tk pmr x =
-    HM.insert tk (HM.insert (createPlate "PM1") (HM.empty) HM.empty) HM.empty
+    HM.insert tk (HM.insert pmPlate HM.empty hmp) pmr
   where
-    rplate = undefined
     hmp = fromMaybe HM.empty (HM.lookup tk pmr)
+    hmw = fromMaybe HM.empty (HM.lookup pmPlate hmp)
+    summarizedWellsHM = foldl' (condenseWells (wells x)) hmw allWells
+    pmPlate = case (pm . meta) x of
+        PM (Just a) -> a
+        PM Nothing -> error "No pm plate available"
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+-- | Takes the currently stored WellInfo for a well, and compares it to the
+-- one from the new experiment. If the summaryValue is greater than the stored
+-- value, we want to replace the stored value with the new one. This will
+-- condense all of the replicates for a given PM plate down to a single Well
+-- representing the max summaryValue from any of the replicates.
+condenseWells :: HM.HashMap Well WellInfo
+              -> HM.HashMap Well WellInfo
+              -> Well
+              -> HM.HashMap Well WellInfo
+condenseWells nw hm w
+    | newValue > oldValue = HM.insert w newWells hm
+    | otherwise = hm
+  where
+    newWells = fromMaybe (error "All plates should have 96 wells") (HM.lookup w nw)
+    oldWells = fromMaybe (error "All plates should have 96 wells") (HM.lookup w hm)
+    newValue = summaryValue newWells
+    oldValue = summaryValue oldWells
 
 
 -- | Parse the header for plate metadata
