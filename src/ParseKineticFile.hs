@@ -23,6 +23,7 @@ module ParseKineticFile
 ,groupExperimentBy
 ,otype
 ,name
+,summarizeGroup
 ) where
 
 import Prelude ((+),(-),(++), (*), Enum, Float, Double, undefined, error, Bounded, minBound, logBase, fromIntegral, round, floor )
