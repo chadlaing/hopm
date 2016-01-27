@@ -24,6 +24,7 @@ module ParseKineticFile
 ,otype
 ,name
 ,summarizeGroup
+,createPMResultTable
 ) where
 
 import Prelude ((+),(-),(++), (*), Enum, Float, Double, undefined, error, Bounded, minBound, logBase, fromIntegral, round, floor )
@@ -37,7 +38,7 @@ import Data.Tuple (fst)
 import Data.Maybe
 import           Text.Read
 import           Text.Show
-import Data.List (zip3, concatMap, transpose, length, filter, sum, (!!), take, maximum)
+import Data.List (concat,zip3, concatMap, transpose, length, filter, sum, (!!), take, maximum)
 import Data.Foldable (foldl')
 import Data.Function ((.), ($))
 import Data.Functor (fmap)
@@ -163,6 +164,38 @@ addExperimentToGroup md hm x = HM.insert metaKey expList hm
 
 -- Convenience type
 type PMResult = HM.HashMap T.Text (HM.HashMap Plate (HM.HashMap Well WellInfo))
+
+createPMResultTable :: PMResult
+                    -> [[T.Text]]
+createPMResultTable = HM.foldlWithKey' gatherAllPlateValues [[]]
+
+
+gatherAllPlateValues :: [[T.Text]]
+                     -> T.Text
+                     -> HM.HashMap Plate (HM.HashMap Well WellInfo)
+                     -> [[T.Text]]
+gatherAllPlateValues xs k hmp = case xs of
+    [[]] -> [x]
+    _    -> x:xs
+  where
+    x = k:allPlateValues
+    allPlateValues = HM.foldl' gatherAllWellValues [] hmp
+
+
+gatherAllWellValues :: [T.Text]
+                    -> HM.HashMap Well WellInfo
+                    -> [T.Text]
+gatherAllWellValues xs hm = concat [allWells, xs]
+  where
+    allWells = HM.foldl' getSummaryValue xs hm
+
+getSummaryValue :: [T.Text]
+                -> WellInfo
+                -> [T.Text]
+getSummaryValue xs wi = x:xs
+  where
+    x = T.pack (show (summaryValue wi))
+
 
 -- | For whatever groups have been created, summarize each list of experiments
 -- into a single summary PM plate
