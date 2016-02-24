@@ -25,6 +25,7 @@ module ParseKineticFile
 ,name
 ,summarizeGroup
 ,createPMResultTable
+,freeSummaryValues
 ) where
 
 import Prelude ((+),(-),(++), (*), Enum, Float, Double, undefined, error, Bounded, minBound, logBase, fromIntegral, round, floor )
@@ -164,6 +165,44 @@ addExperimentToGroup md hm x = HM.insert metaKey expList hm
 
 -- Convenience type
 type PMResult = HM.HashMap T.Text (HM.HashMap Plate (HM.HashMap Well WellInfo))
+
+type TriValue = (T.Text, T.Text, T.Text)
+-- | Print out the combined strain values for each plate
+-- eg. [
+--        ["ECI-2631", "10mM Sodium Nitrate", 846.7721616293561]
+--       ,["ECI-2631", "9% Sodium Lactate", 275.1482422173669]
+--     ]
+freeSummaryValues :: PMResult
+                  -> [TriValue]
+freeSummaryValues = HM.foldlWithKey' getTriValue []
+  where
+    getTriValue :: [TriValue]
+                -> T.Text
+                -> HM.HashMap Plate (HM.HashMap Well WellInfo)
+                -> [TriValue]
+    getTriValue xs k hm = case xs of
+        [] -> x
+        _    -> concat [x,xs]
+      where
+        x = HM.foldl' (getAllPlateValues k) [] hm
+        getAllPlateValues :: T.Text
+                          -> [TriValue]
+                          -> HM.HashMap Well WellInfo
+                          -> [TriValue]
+        getAllPlateValues k' xs' hmwi = concat [x',xs']
+          where
+            x' = HM.foldl' (getWellValue k') [] hmwi
+              where
+                getWellValue :: T.Text
+                             -> [TriValue]
+                             -> WellInfo
+                             -> [TriValue]
+                getWellValue k'' xs'' wi = x'':xs''
+                  where
+                    x'' = (k'', annotation wi, (T.pack . show) $ summaryValue wi)
+
+
+
 
 createPMResultTable :: PMResult
                     -> [[T.Text]]

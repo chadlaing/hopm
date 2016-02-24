@@ -34,6 +34,7 @@ executable hopm-exe
                      , text
                      , hashable
                      , unordered-containers
+                     , tuple
   default-language:    Haskell2010
 
 test-suite hopm-test
