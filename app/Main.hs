@@ -29,7 +29,7 @@ main = do
     let condensedGroupedData = summarizeGroup groupedData
     --let resultTable = createPMResultTable condensedGroupedData
     let freeValues = freeSummaryValues condensedGroupedData
-    mapM_ putStrLn $ fmap (\(a,b,c) -> T.concat[a, ",", b, ",", c]) freeValues
+    mapM_ putStrLn $ fmap (\(a,b,c) -> T.concat[a, "\t", b, "\t", c]) freeValues
 
 
     --print $ sort $ fmap summaryValue $ (HM.elems . wells) c
