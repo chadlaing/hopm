@@ -166,7 +166,7 @@ addExperimentToGroup md hm x = HM.insert metaKey expList hm
 -- Convenience type
 type PMResult = HM.HashMap T.Text (HM.HashMap Plate (HM.HashMap Well WellInfo))
 
-type TriValue = (T.Text, T.Text, T.Text)
+type TriValue = (T.Text, T.Text, T.Text, T.Text, T.Text)
 -- | Print out the combined strain values for each plate
 -- eg. [
 --        ["ECI-2631", "10mM Sodium Nitrate", 846.7721616293561]
@@ -184,22 +184,25 @@ freeSummaryValues = HM.foldlWithKey' getTriValue []
         [] -> x
         _    -> concat [x,xs]
       where
-        x = HM.foldl' (getAllPlateValues k) [] hm
+        x = HM.foldlWithKey' (getAllPlateValues k) [] hm
         getAllPlateValues :: T.Text
                           -> [TriValue]
+                          -> Plate
                           -> HM.HashMap Well WellInfo
                           -> [TriValue]
-        getAllPlateValues k' xs' hmwi = concat [x',xs']
+        getAllPlateValues k' xs' p hmwi = concat [x',xs']
           where
-            x' = HM.foldl' (getWellValue k') [] hmwi
+            x' = HM.foldlWithKey' (getWellValue k' p) [] hmwi
               where
                 getWellValue :: T.Text
+                             -> Plate
                              -> [TriValue]
+                             -> Well
                              -> WellInfo
                              -> [TriValue]
-                getWellValue k'' xs'' wi = x'':xs''
+                getWellValue k'' p' xs'' w wi = x'':xs''
                   where
-                    x'' = (k'', annotation wi, (T.pack . show) $ summaryValue wi)
+                    x'' = (k'', annotation wi, (T.pack . show) $ p', (T.pack . show) $ w , (T.pack . show) $ summaryValue wi)
 
 
 
